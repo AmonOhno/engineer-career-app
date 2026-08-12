@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+
+# 環境変数（接続情報を含むためコミットしない）
+.env
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo
+supabase/.temp/
