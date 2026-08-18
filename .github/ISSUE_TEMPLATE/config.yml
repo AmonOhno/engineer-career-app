@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 開発規約
+    url: https://github.com/AmonOhno/engineer-career-app/blob/main/CONTRIBUTING.md
+    about: issue 駆動・ブランチ・PR の進め方はこちら
