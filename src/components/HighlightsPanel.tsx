@@ -1,7 +1,7 @@
 /** 自己PR・職務要約・志望動機などの文章ブロックの編集画面。 */
 
-import { useState } from 'react';
 import { useCareerStore, useCareerDataset } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type { CareerHighlight, HighlightKind } from '../types/career';
 import { HIGHLIGHT_KIND_LABEL } from '../lib/format';
 import { createId } from '../lib/ids';
@@ -41,8 +41,14 @@ export const HighlightsPanel = ({ userId }: { userId: string }) => {
   const deleteHighlight = useCareerStore((s) => s.deleteHighlight);
   const dataset = useCareerDataset();
 
-  const [form, setForm] = useState<CareerHighlight>(() => emptyHighlight(userId));
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm] = useDraftState<CareerHighlight>('highlights:form', () =>
+    emptyHighlight(userId)
+  );
+  const [editingId, setEditingId] = useDraftState<string | null>(
+    'highlights:editingId',
+    () => null
+  );
 
   const update = <K extends keyof CareerHighlight>(
     key: K,

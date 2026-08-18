@@ -1,7 +1,7 @@
 /** 応募管理。希望条件とのマッチ度と、提示年収の比較を出す。 */
 
-import { useState } from 'react';
 import { useCareerStore } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type {
   ApplicationStatus,
   CareerApplication,
@@ -67,10 +67,15 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
   const saveApplication = useCareerStore((s) => s.saveApplication);
   const deleteApplication = useCareerStore((s) => s.deleteApplication);
 
-  const [form, setForm] = useState<CareerApplication>(() =>
-    emptyApplication(userId)
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm] = useDraftState<CareerApplication>(
+    'applications:form',
+    () => emptyApplication(userId)
   );
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useDraftState<string | null>(
+    'applications:editingId',
+    () => null
+  );
 
   const update = <K extends keyof CareerApplication>(
     key: K,

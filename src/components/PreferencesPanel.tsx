@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCareerStore, emptyPreference } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type {
   CareerPreference,
   EmploymentType,
@@ -47,14 +48,18 @@ export const PreferencesPanel = ({ userId }: { userId: string }) => {
   const savePreference = useCareerStore((s) => s.savePreference);
   const loading = useCareerStore((s) => s.loading);
 
-  const [form, setForm] = useState<CareerPreference>(
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm, hasDraft] = useDraftState<CareerPreference>(
+    'preferences:form',
     () => preference ?? emptyPreference(userId)
   );
   const [saved, setSaved] = useState(false);
 
+  // 取得完了でフォームを読み直す。編集中の下書きがある場合は上書きしない。
   useEffect(() => {
-    setForm(preference ?? emptyPreference(userId));
-  }, [preference, userId]);
+    if (hasDraft || !preference) return;
+    setForm(preference);
+  }, [hasDraft, preference]);
 
   const update = <K extends keyof CareerPreference>(
     key: K,

@@ -5,6 +5,7 @@
 
 import { useMemo, useState } from 'react';
 import { useCareerStore, useCareerDataset } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type { DocumentKind } from '../types/career';
 import {
   DOCUMENT_KIND_LABEL,
@@ -26,8 +27,15 @@ export const DocumentsPanel = ({ userId }: { userId: string }) => {
   const saveDocument = useCareerStore((s) => s.saveDocument);
   const deleteDocument = useCareerStore((s) => s.deleteDocument);
 
-  const [kind, setKind] = useState<DocumentKind>('career_history');
-  const [applicationId, setApplicationId] = useState<string>('');
+  // 選択状態も下書きストアに保持する（タブを切り替えても戻せるように）。
+  const [kind, setKind] = useDraftState<DocumentKind>(
+    'documents:kind',
+    () => 'career_history'
+  );
+  const [applicationId, setApplicationId] = useDraftState<string>(
+    'documents:applicationId',
+    () => ''
+  );
   const [notice, setNotice] = useState<string>('');
 
   const application =
