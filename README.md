@@ -75,6 +75,10 @@ npm run dev      # http://localhost:3100
 
 ## 開発
 
+**このリポジトリの修正はすべて GitHub issue 起点で行い、Pull Request 経由でのみ main に入れる。**
+手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
+
+
 ```bash
 npm run typecheck   # 型検査
 npm test            # ドメインロジックの単体テスト（66 件）
@@ -86,6 +90,9 @@ npm run preview     # ビルド結果の確認
 
 ```
 .
+├── CONTRIBUTING.md          # 開発規約（issue 駆動 → PR → マージ）
+├── CLAUDE.md                # AI エージェント向けの前提と規約
+├── .github/                 # issue / PR テンプレート
 ├── index.html
 ├── vite.config.ts
 ├── src/
