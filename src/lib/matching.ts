@@ -2,13 +2,22 @@
  * 応募先と希望条件のマッチ度算出。
  *
  * 業務内容（職種・業界・技術スタック）と、業務内容以外（年収・勤務地・
- * リモート・福利厚生）を別々に採点し、合成する。絶対条件（must have）を
- * 満たさない場合は個別に警告として返す。
+ * リモート・福利厚生・みなし残業）を別々に採点し、合成する。絶対条件
+ * （must have）を満たさない場合は個別に警告として返す。
+ *
+ * 福利厚生はマスタのコードで突き合わせ、自由記述はマスタに寄せてから比較する
+ * （`lib/masters/benefits.ts`）。
  *
  * 純粋関数のみ。
  */
 
 import type { CareerApplication, CareerPreference } from '../types/career';
+import {
+  benefitLabel,
+  describeFixedOvertime,
+  mergeBenefitKeys,
+  scoreFixedOvertime,
+} from './masters';
 
 export interface MatchFactor {
   label: string;
@@ -114,9 +123,22 @@ export const evaluateMatch = (
     preference.desiredTechStack,
     application.techStack
   );
-  const benefitRatio = overlapRatio(
-    preference.desiredBenefits,
+  // 福利厚生はマスタ選択 + 自由記述をコードに寄せてから突き合わせる
+  const desiredBenefitKeys = mergeBenefitKeys(
+    preference.desiredBenefitCodes,
+    preference.desiredBenefits
+  );
+  const offeredBenefitKeys = mergeBenefitKeys(
+    application.benefitCodes,
     application.benefits
+  );
+  const benefitRatio = overlapRatio(desiredBenefitKeys, offeredBenefitKeys);
+
+  const fixedOvertimeScore = scoreFixedOvertime(
+    application.fixedOvertimeType,
+    application.fixedOvertimeHours,
+    preference.allowFixedOvertime,
+    preference.maxFixedOvertimeHours
   );
   const avoidHits = preference.avoidTechStack.filter((avoid) =>
     application.techStack.some((tech) => normalize(tech) === normalize(avoid))
@@ -183,6 +205,17 @@ export const evaluateMatch = (
           ? '希望福利厚生が未登録'
           : `希望の ${Math.round(benefitRatio * 100)}% が一致`,
     },
+    {
+      label: 'みなし残業',
+      score: fixedOvertimeScore,
+      weight: 10,
+      detail: describeFixedOvertime(
+        application.fixedOvertimeType,
+        application.fixedOvertimeHours,
+        application.fixedOvertimeAllowance,
+        application.overtimePayBeyondFixed
+      ),
+    },
   ];
 
   const scored = factors.filter(
@@ -208,6 +241,7 @@ export const evaluateMatch = (
       application.memo,
       ...application.techStack,
       ...application.benefits,
+      ...application.benefitCodes.map(benefitLabel),
     ].join(' ')
   );
 
@@ -221,6 +255,26 @@ export const evaluateMatch = (
     );
   }
   avoidHits.forEach((tech) => unmetMustHaves.push(`避けたい技術を含む: ${tech}`));
+
+  if (application.fixedOvertimeType === 'included') {
+    if (!preference.allowFixedOvertime) {
+      unmetMustHaves.push('みなし残業なしの希望に反する');
+    } else if (
+      preference.maxFixedOvertimeHours != null &&
+      application.fixedOvertimeHours != null &&
+      application.fixedOvertimeHours > preference.maxFixedOvertimeHours
+    ) {
+      unmetMustHaves.push(
+        `みなし残業 ${application.fixedOvertimeHours} 時間が許容上限（${preference.maxFixedOvertimeHours} 時間）を超える`
+      );
+    }
+    if (
+      preference.requireOvertimePayBeyondFixed &&
+      !application.overtimePayBeyondFixed
+    ) {
+      unmetMustHaves.push('みなし残業の超過分が別途支給されるか未確認');
+    }
+  }
 
   return { score, factors, unmetMustHaves };
 };

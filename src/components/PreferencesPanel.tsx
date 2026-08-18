@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useCareerStore, emptyPreference } from '../stores/careerStore';
 import { useDraftState } from '../stores/draftStore';
 import type {
+  BenefitCode,
   CareerPreference,
   EmploymentType,
   ProjectPhase,
@@ -17,6 +18,7 @@ import {
   PROJECT_PHASE_LABEL,
   REMOTE_PREFERENCE_LABEL,
 } from '../lib/format';
+import { BenefitSelector } from './BenefitSelector';
 import {
   Button,
   Card,
@@ -195,13 +197,6 @@ export const PreferencesPanel = ({ userId }: { userId: string }) => {
               onChange={(v) => update('minHolidays', v)}
             />
           </Field>
-          <Field label="希望する福利厚生" hint="カンマ区切り" wide>
-            <TagInput
-              value={form.desiredBenefits}
-              onChange={(v) => update('desiredBenefits', v)}
-              placeholder="書籍購入補助, カンファレンス参加費補助, 住宅手当, ストックオプション"
-            />
-          </Field>
           <Field label="希望する企業規模" hint="カンマ区切り">
             <TagInput
               value={form.desiredCompanySizes}
@@ -227,6 +222,58 @@ export const PreferencesPanel = ({ userId }: { userId: string }) => {
             label="フレックス / 裁量労働であること"
             checked={form.flextimeRequired}
             onChange={(v) => update('flextimeRequired', v)}
+          />
+        </div>
+      </Card>
+
+      <Card
+        title="福利厚生の希望"
+        description="一般的な項目はマスタから選ぶ。応募先の福利厚生と突き合わせてマッチ度に反映される。"
+      >
+        <BenefitSelector
+          value={form.desiredBenefitCodes}
+          onChange={(v) => update('desiredBenefitCodes', v as BenefitCode[])}
+        />
+        <div className="grid">
+          <Field
+            label="その他の希望（マスタにない項目）"
+            hint="カンマ区切り"
+            wide
+          >
+            <TagInput
+              value={form.desiredBenefits}
+              onChange={(v) => update('desiredBenefits', v)}
+              placeholder="社内 ISUCON, 技術顧問との1on1"
+            />
+          </Field>
+        </div>
+      </Card>
+
+      <Card
+        title="みなし残業（固定残業代）の希望"
+        description="同じ提示年収でも、みなし残業の時間数で実質の条件は変わる。許容上限を超える求人は未充足条件として警告する。"
+      >
+        <div className="grid">
+          <Field
+            label="許容できるみなし残業時間（月/時間）"
+            hint="未入力なら 20 時間以内を一般的な水準として採点する"
+          >
+            <NumberInput
+              value={form.maxFixedOvertimeHours}
+              onChange={(v) => update('maxFixedOvertimeHours', v)}
+            />
+          </Field>
+        </div>
+        <div className="inline-checks">
+          <Checkbox
+            label="みなし残業ありの求人も受け入れる"
+            checked={form.allowFixedOvertime}
+            onChange={(v) => update('allowFixedOvertime', v)}
+          />
+          <Checkbox
+            label="超過分が別途支給されること"
+            checked={form.requireOvertimePayBeyondFixed}
+            onChange={(v) => update('requireOvertimePayBeyondFixed', v)}
           />
         </div>
       </Card>
