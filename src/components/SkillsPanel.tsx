@@ -1,7 +1,7 @@
 /** 保有スキルの登録画面。レベル・経験年数・最終使用年月まで持つ。 */
 
-import { useState } from 'react';
 import { useCareerStore } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type { CareerSkill, SkillCategory } from '../types/career';
 import { SKILL_CATEGORY_LABEL, SKILL_LEVEL_LABEL } from '../lib/format';
 import { createId } from '../lib/ids';
@@ -43,8 +43,14 @@ export const SkillsPanel = ({ userId }: { userId: string }) => {
   const saveSkill = useCareerStore((s) => s.saveSkill);
   const deleteSkill = useCareerStore((s) => s.deleteSkill);
 
-  const [form, setForm] = useState<CareerSkill>(() => emptySkill(userId));
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm] = useDraftState<CareerSkill>('skills:form', () =>
+    emptySkill(userId)
+  );
+  const [editingId, setEditingId] = useDraftState<string | null>(
+    'skills:editingId',
+    () => null
+  );
 
   const update = <K extends keyof CareerSkill>(key: K, value: CareerSkill[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));

@@ -4,9 +4,10 @@
  * 認証は資産シミュレーターと同じ Supabase セッションを共有する。
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from './lib/supabase';
 import { useCareerStore } from './stores/careerStore';
+import { useDraftStore, useDraftState } from './stores/draftStore';
 import { Dashboard } from './components/Dashboard';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SkillsPanel } from './components/SkillsPanel';
@@ -41,7 +42,10 @@ function App() {
   const error = useCareerStore((s) => s.error);
   const clearError = useCareerStore((s) => s.clearError);
 
-  const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [activeTab, setActiveTab] = useDraftState<TabId>(
+    'app:activeTab',
+    () => 'dashboard'
+  );
 
   // 認証状態の監視
   useEffect(() => {
@@ -68,6 +72,8 @@ function App() {
   const loadedUserRef = useRef<string | null>(null);
   useEffect(() => {
     const userId = session?.user?.id ?? null;
+    // 入力途中の下書きは持ち主に紐づく。ログアウト・ユーザー切り替えで破棄する。
+    useDraftStore.getState().setOwner(userId);
     if (!userId || loadedUserRef.current === userId) return;
     loadedUserRef.current = userId;
 

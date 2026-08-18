@@ -156,6 +156,21 @@ Markdown → HTML 変換は依存を増やさないため自前実装（見出�
 - プロフィールと希望条件はユーザーごとに 1 行で、`user_id` を `onConflict` に指定して upsert する。
 - エラーは `describeSupabaseError` で文字列化し、ストアの `error` に載せて画面上部に出す。
 
+### 入力途中データ（下書き）
+
+`App.tsx` はアクティブなタブのパネルだけを描画するため、タブを切り替えると
+パネルがアンマウントされ、ローカル state のフォーム内容が失われる。
+これを避けるため、フォームの値は `draftStore`（`src/stores/draftStore.ts`）に逃がす。
+
+- 各パネルは `useState` の代わりに `useDraftState(key, createInitial)` を使う。
+  戻り値は `[value, setValue, hasDraft]` で、`useState` と同じ感覚で書ける。
+- キーは `<パネル>:<フォーム名>`（例: `applications:form` / `applications:editingId`）。
+- 永続化先は sessionStorage。タブ切り替えに加えてリロードにも耐える。
+- 下書きは「持ち主（ユーザー ID）」に紐づき、ログアウト・ユーザー切り替えで破棄する
+  （`setOwner` を `App.tsx` の初回ロード effect で呼ぶ）。
+- プロフィール・希望条件のように取得値でフォームを初期化するパネルは、
+  `hasDraft` が真のあいだサーバー取得値で上書きしない（編集中の内容を優先する）。
+
 ## 6. テーブル
 
 | テーブル | 内容 | ID プレフィックス |
@@ -177,7 +192,7 @@ Markdown → HTML 変換は依存を増やさないため自前実装（見出�
 
 ## 7. テスト観点
 
-`src/lib/__tests__/` に単体テストを置く。
+`src/lib/__tests__/`（純粋関数）と `src/stores/__tests__/`（ストア）に単体テストを置く。
 
 - **compensation**: 到達済み / 未登録 / 境界（ちょうど到達する上げ幅）で転職回数が正しいか
 - **marketValue**: 空データで 0 点、定量成果なしで該当軸が 0、鮮度 2 年境界
@@ -186,3 +201,5 @@ Markdown → HTML 変換は依存を増やさないため自前実装（見出�
 - **documents**: 満年齢の誕生日前後、在職中の「現在に至る」、主力プロジェクトの並び順、
   HTML エスケープ（`<script>` が通らないこと）
 - **drafts**: 空データでも文章として成立すること
+- **draftStore / useDraftState**: 下書きの保存・破棄・持ち主の切り替え、
+  アンマウント → 再マウント（タブ切り替え）で入力内容が残ること

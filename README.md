@@ -81,7 +81,7 @@ npm run dev      # http://localhost:3100
 
 ```bash
 npm run typecheck   # 型検査
-npm test            # ドメインロジックの単体テスト（66 件）
+npm test            # ドメインロジック・ストアの単体テスト（79 件）
 npm run build       # 型検査 + 本番ビルド
 npm run preview     # ビルド結果の確認
 ```
@@ -110,7 +110,8 @@ npm run preview     # ビルド結果の確認
 │   │   ├── supabaseError.ts # エラーコード → 原因説明
 │   │   └── download.ts      # ダウンロード・印刷・クリップボード（副作用の集約）
 │   ├── stores/
-│   │   └── careerStore.ts   # Supabase 直接アクセス（Zustand）
+│   │   ├── careerStore.ts   # Supabase 直接アクセス（Zustand）
+│   │   └── draftStore.ts    # 入力途中データの保持（タブ切り替え対策）
 │   └── components/          # 画面
 ├── supabase/migrations/     # career_* テーブル定義（RLS 込み）
 └── docs/specification.md    # 詳細仕様
@@ -120,6 +121,8 @@ npm run preview     # ビルド結果の確認
 
 - **`lib/` は純粋関数**。DB・React・`new Date()` に依存させない（基準日は引数で受ける）。
   これによりスコアリングと書類生成をテストで固定できる。
+- **フォームの state は `useDraftState`（`stores/draftStore.ts`）に置く**。
+  タブを切り替えるとパネルはアンマウントされるため、`useState` では入力途中の内容が消える。
 - **DB アクセスはストア経由のみ**。ミューテーション後は変更したリソースの `fetchXxx` だけを呼ぶ。
   全件再取得の関数は持たない。
 - **ケース変換**は DB 境界で必ず `toCamelCase` / `toSnakeCase` を通す。

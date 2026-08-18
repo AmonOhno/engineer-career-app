@@ -1,7 +1,7 @@
 /** 職歴と経験プロジェクトの登録画面。プロジェクトは課題・施策・成果で持つ。 */
 
-import { useState } from 'react';
 import { useCareerStore } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type {
   CareerExperience,
   CareerProject,
@@ -82,8 +82,15 @@ const ExperienceForm = ({ userId }: { userId: string }) => {
   const saveExperience = useCareerStore((s) => s.saveExperience);
   const deleteExperience = useCareerStore((s) => s.deleteExperience);
 
-  const [form, setForm] = useState<CareerExperience>(() => emptyExperience(userId));
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm] = useDraftState<CareerExperience>(
+    'experiences:form',
+    () => emptyExperience(userId)
+  );
+  const [editingId, setEditingId] = useDraftState<string | null>(
+    'experiences:editingId',
+    () => null
+  );
 
   const update = <K extends keyof CareerExperience>(
     key: K,
@@ -246,8 +253,14 @@ const ProjectForm = ({ userId }: { userId: string }) => {
   const saveProject = useCareerStore((s) => s.saveProject);
   const deleteProject = useCareerStore((s) => s.deleteProject);
 
-  const [form, setForm] = useState<CareerProject>(() => emptyProject(userId));
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm] = useDraftState<CareerProject>('projects:form', () =>
+    emptyProject(userId)
+  );
+  const [editingId, setEditingId] = useDraftState<string | null>(
+    'projects:editingId',
+    () => null
+  );
 
   const update = <K extends keyof CareerProject>(
     key: K,
@@ -453,7 +466,10 @@ const ProjectForm = ({ userId }: { userId: string }) => {
 };
 
 export const ExperiencePanel = ({ userId }: { userId: string }) => {
-  const [tab, setTab] = useState<'experience' | 'project'>('experience');
+  const [tab, setTab] = useDraftState<'experience' | 'project'>(
+    'experiences:subtab',
+    () => 'experience'
+  );
 
   return (
     <>

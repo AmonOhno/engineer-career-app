@@ -32,6 +32,8 @@ npm run build       # 型検査 + 本番ビルド
 ## 設計上の約束
 
 - `src/lib/` は純粋関数。DB・React・`new Date()` に依存させない（基準日は引数で受ける）
+- 画面のフォーム state は `useState` ではなく `useDraftState`（`src/stores/draftStore.ts`）を使う。
+  タブ切り替えでパネルがアンマウントされるため、`useState` だと入力途中の内容が消える
 - DB アクセスは `src/stores/` のストア経由のみ。ミューテーション後は該当リソースの `fetchXxx` だけを呼ぶ
 - DB 境界では必ず `toCamelCase` / `toSnakeCase` を通す（DB は snake_case、フロントは camelCase）
 - ID はクライアント側で `<prefix>_<uuid>` 形式を発行する（`src/lib/ids.ts`）

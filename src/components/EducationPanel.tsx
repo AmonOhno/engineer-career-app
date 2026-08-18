@@ -1,7 +1,7 @@
 /** 学歴と資格の登録画面。履歴書の年表欄に転記される。 */
 
-import { useState } from 'react';
 import { useCareerStore } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type { CareerCertification, CareerEducation } from '../types/career';
 import { formatPeriod, formatYearMonth } from '../lib/format';
 import { createId } from '../lib/ids';
@@ -40,16 +40,22 @@ export const EducationPanel = ({ userId }: { userId: string }) => {
   const saveCertification = useCareerStore((s) => s.saveCertification);
   const deleteCertification = useCareerStore((s) => s.deleteCertification);
 
-  const [education, setEducation] = useState<CareerEducation>(() =>
-    emptyEducation(userId)
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [education, setEducation] = useDraftState<CareerEducation>(
+    'educations:form',
+    () => emptyEducation(userId)
   );
-  const [educationEditing, setEducationEditing] = useState<string | null>(null);
-  const [certification, setCertification] = useState<CareerCertification>(() =>
-    emptyCertification(userId)
+  const [educationEditing, setEducationEditing] = useDraftState<string | null>(
+    'educations:editingId',
+    () => null
   );
-  const [certificationEditing, setCertificationEditing] = useState<string | null>(
-    null
+  const [certification, setCertification] = useDraftState<CareerCertification>(
+    'certifications:form',
+    () => emptyCertification(userId)
   );
+  const [certificationEditing, setCertificationEditing] = useDraftState<
+    string | null
+  >('certifications:editingId', () => null);
 
   const submitEducation = async () => {
     if (!education.schoolName.trim()) return;

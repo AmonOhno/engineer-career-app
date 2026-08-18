@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useCareerStore, emptyProfile } from '../stores/careerStore';
+import { useDraftState } from '../stores/draftStore';
 import type { CareerProfile } from '../types/career';
 import {
   Button,
@@ -18,15 +19,18 @@ export const ProfilePanel = ({ userId }: { userId: string }) => {
   const saveProfile = useCareerStore((s) => s.saveProfile);
   const loading = useCareerStore((s) => s.loading);
 
-  const [form, setForm] = useState<CareerProfile>(
+  // 下書きストアに保持する。タブを切り替えて戻っても入力内容が残る。
+  const [form, setForm, hasDraft] = useDraftState<CareerProfile>(
+    'profile:form',
     () => profile ?? emptyProfile(userId)
   );
   const [saved, setSaved] = useState(false);
 
-  // 取得完了・ユーザー切り替えでフォームを読み直す
+  // 取得完了でフォームを読み直す。編集中の下書きがある場合は上書きしない。
   useEffect(() => {
-    setForm(profile ?? emptyProfile(userId));
-  }, [profile, userId]);
+    if (hasDraft || !profile) return;
+    setForm(profile);
+  }, [hasDraft, profile]);
 
   const update = <K extends keyof CareerProfile>(
     key: K,
