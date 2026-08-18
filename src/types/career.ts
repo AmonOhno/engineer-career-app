@@ -198,6 +198,61 @@ export interface CareerHighlight {
 
 export type RemotePreference = 'full_remote' | 'hybrid' | 'onsite' | 'any';
 
+/** 福利厚生マスタの分類。 */
+export type BenefitCategory =
+  | 'compensation'
+  | 'work_style'
+  | 'leave'
+  | 'growth'
+  | 'welfare';
+
+/**
+ * 福利厚生マスタのコード。求人票でよく見る一般的な項目を選択式で持つ。
+ * ラベル・分類・表記ゆれの別名は `lib/masters/benefits.ts` にある。
+ */
+export type BenefitCode =
+  // 報酬・手当
+  | 'housing_allowance'
+  | 'commuting_allowance'
+  | 'remote_allowance'
+  | 'family_allowance'
+  | 'retirement_plan'
+  | 'defined_contribution'
+  | 'stock_options'
+  | 'employee_stock_plan'
+  | 'bonus'
+  // 働き方
+  | 'flextime'
+  | 'discretionary_work'
+  | 'remote_work'
+  | 'side_job_allowed'
+  | 'short_time_work'
+  | 'device_choice'
+  | 'casual_dress'
+  // 休暇
+  | 'two_day_weekend'
+  | 'hourly_paid_leave'
+  | 'refresh_leave'
+  | 'childcare_leave'
+  | 'nursing_care_leave'
+  | 'sick_leave'
+  // 学習・成長
+  | 'book_purchase'
+  | 'conference_support'
+  | 'certification_support'
+  | 'training_program'
+  | 'oss_support'
+  // 生活・健康
+  | 'social_insurance'
+  | 'health_checkup'
+  | 'mental_health_care'
+  | 'meal_support'
+  | 'childcare_support'
+  | 'relocation_support';
+
+/** みなし残業（固定残業代）の有無。 */
+export type FixedOvertimeType = 'unknown' | 'none' | 'included';
+
 /** 希望条件。業務内容とそれ以外をまとめてユーザーごとに 1 レコード。 */
 export interface CareerPreference {
   id: string;
@@ -227,6 +282,15 @@ export interface CareerPreference {
   minHolidays: number | null;
   sideJobRequired: boolean;
   flextimeRequired: boolean;
+  /** みなし残業ありの求人も受け入れるか。false ならマッチ度 0 + 未充足条件として警告する。 */
+  allowFixedOvertime: boolean;
+  /** 許容できるみなし残業時間（月/時間）。超える求人は未充足条件として警告する。 */
+  maxFixedOvertimeHours: number | null;
+  /** みなし残業の超過分が別途支給されることを必須とするか。 */
+  requireOvertimePayBeyondFixed: boolean;
+  /** 希望する福利厚生（マスタ選択）。 */
+  desiredBenefitCodes: BenefitCode[];
+  /** 希望する福利厚生のうち、マスタに無いもの（自由記述）。 */
   desiredBenefits: string[];
   desiredCompanySizes: string[];
   desiredEmploymentTypes: EmploymentType[];
@@ -282,7 +346,18 @@ export interface CareerApplication {
   remotePolicy: RemotePreference | '';
   industry: string;
   techStack: string[];
+  /** 求人票に記載された福利厚生（マスタ選択）。 */
+  benefitCodes: BenefitCode[];
+  /** 求人票に記載された福利厚生のうち、マスタに無いもの（自由記述）。 */
   benefits: string[];
+  /** みなし残業（固定残業代）の有無。 */
+  fixedOvertimeType: FixedOvertimeType;
+  /** みなし残業時間（月/時間）。 */
+  fixedOvertimeHours: number | null;
+  /** 固定残業代（円/月）。 */
+  fixedOvertimeAllowance: number | null;
+  /** みなし残業を超えた分が別途支給されるか。 */
+  overtimePayBeyondFixed: boolean;
   memo: string;
 }
 

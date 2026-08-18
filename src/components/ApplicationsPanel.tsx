@@ -4,7 +4,9 @@ import { useCareerStore } from '../stores/careerStore';
 import { useDraftState } from '../stores/draftStore';
 import type {
   ApplicationStatus,
+  BenefitCode,
   CareerApplication,
+  FixedOvertimeType,
   RemotePreference,
 } from '../types/career';
 import {
@@ -13,13 +15,17 @@ import {
   formatManYen,
 } from '../lib/format';
 import { createId } from '../lib/ids';
+import { FIXED_OVERTIME_TYPE_LABEL, describeFixedOvertime } from '../lib/masters';
 import { evaluateMatch } from '../lib/matching';
+import { BenefitSelector } from './BenefitSelector';
 import {
   Button,
   Card,
+  Checkbox,
   EmptyState,
   Field,
   ManYenInput,
+  NumberInput,
   ScoreBar,
   Select,
   TagInput,
@@ -30,6 +36,10 @@ import {
 const STATUS_OPTIONS = (
   Object.keys(APPLICATION_STATUS_LABEL) as ApplicationStatus[]
 ).map((value) => ({ value, label: APPLICATION_STATUS_LABEL[value] }));
+
+const FIXED_OVERTIME_OPTIONS = (
+  Object.keys(FIXED_OVERTIME_TYPE_LABEL) as FixedOvertimeType[]
+).map((value) => ({ value, label: FIXED_OVERTIME_TYPE_LABEL[value] }));
 
 const REMOTE_OPTIONS: { value: RemotePreference | ''; label: string }[] = [
   { value: '', label: '未確認' },
@@ -57,7 +67,12 @@ const emptyApplication = (userId: string): CareerApplication => ({
   remotePolicy: '',
   industry: '',
   techStack: [],
+  benefitCodes: [],
   benefits: [],
+  fixedOvertimeType: 'unknown',
+  fixedOvertimeHours: null,
+  fixedOvertimeAllowance: null,
+  overtimePayBeyondFixed: false,
   memo: '',
 });
 
@@ -182,10 +197,29 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
               onChange={(v) => update('techStack', v)}
             />
           </Field>
-          <Field label="福利厚生" hint="カンマ区切り">
+          <Field label="福利厚生（マスタにない項目）" hint="カンマ区切り">
             <TagInput
               value={form.benefits}
               onChange={(v) => update('benefits', v)}
+            />
+          </Field>
+          <Field label="みなし残業">
+            <Select
+              value={form.fixedOvertimeType}
+              onChange={(v) => update('fixedOvertimeType', v)}
+              options={FIXED_OVERTIME_OPTIONS}
+            />
+          </Field>
+          <Field label="みなし残業時間（月/時間）">
+            <NumberInput
+              value={form.fixedOvertimeHours}
+              onChange={(v) => update('fixedOvertimeHours', v)}
+            />
+          </Field>
+          <Field label="固定残業代（月額）">
+            <ManYenInput
+              value={form.fixedOvertimeAllowance}
+              onChange={(v) => update('fixedOvertimeAllowance', v)}
             />
           </Field>
           <Field label="次アクション">
@@ -216,6 +250,19 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
               onChange={(v) => update('memo', v)}
             />
           </Field>
+        </div>
+        <Field label="福利厚生（求人票に記載されているもの）" wide>
+          <BenefitSelector
+            value={form.benefitCodes}
+            onChange={(v) => update('benefitCodes', v as BenefitCode[])}
+          />
+        </Field>
+        <div className="inline-checks">
+          <Checkbox
+            label="みなし残業の超過分は別途支給される"
+            checked={form.overtimePayBeyondFixed}
+            onChange={(v) => update('overtimePayBeyondFixed', v)}
+          />
         </div>
         <div className="form-footer">
           <div className="form-footer__buttons">
@@ -298,6 +345,17 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
               {match.unmetMustHaves.length > 0 && (
                 <p className="record__body record__body--warn">
                   未充足の条件: {match.unmetMustHaves.join(' / ')}
+                </p>
+              )}
+
+              {application.fixedOvertimeType !== 'unknown' && (
+                <p className="record__body">
+                  {describeFixedOvertime(
+                    application.fixedOvertimeType,
+                    application.fixedOvertimeHours,
+                    application.fixedOvertimeAllowance,
+                    application.overtimePayBeyondFixed
+                  )}
                 </p>
               )}
 

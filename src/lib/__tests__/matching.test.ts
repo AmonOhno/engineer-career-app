@@ -73,10 +73,76 @@ describe('evaluateMatch', () => {
 
   it('判定材料が無い項目はスコア計算から除外される', () => {
     const result = evaluateMatch(
-      makePreference({ desiredBenefits: [] }),
-      makeApplication({ benefits: [] })
+      makePreference({ desiredBenefitCodes: [], desiredBenefits: [] }),
+      makeApplication({ benefitCodes: [], benefits: [] })
     );
     const benefit = result.factors.find((factor) => factor.label === '福利厚生')!;
     expect(benefit.score).toBeNull();
+  });
+
+  it('福利厚生は表記ゆれの自由記述でもマスタ経由で一致する', () => {
+    const result = evaluateMatch(
+      makePreference({
+        desiredBenefitCodes: ['housing_allowance'],
+        desiredBenefits: [],
+      }),
+      makeApplication({ benefitCodes: [], benefits: ['家賃補助'] })
+    );
+    const benefit = result.factors.find((factor) => factor.label === '福利厚生')!;
+    expect(benefit.score).toBe(100);
+  });
+
+  it('みなし残業が未確認ならスコア計算から除外される', () => {
+    const result = evaluateMatch(
+      makePreference(),
+      makeApplication({ fixedOvertimeType: 'unknown' })
+    );
+    const factor = result.factors.find((f) => f.label === 'みなし残業')!;
+    expect(factor.score).toBeNull();
+  });
+
+  it('みなし残業が許容上限を超えると未充足条件になる', () => {
+    const result = evaluateMatch(
+      makePreference({ maxFixedOvertimeHours: 20 }),
+      makeApplication({ fixedOvertimeType: 'included', fixedOvertimeHours: 45 })
+    );
+    expect(
+      result.unmetMustHaves.some((item) => item.includes('みなし残業 45 時間'))
+    ).toBe(true);
+  });
+
+  it('みなし残業なし希望に「あり」の求人は未充足条件になり、スコアも下がる', () => {
+    const allowed = evaluateMatch(
+      makePreference({ allowFixedOvertime: true }),
+      makeApplication({ fixedOvertimeType: 'included', fixedOvertimeHours: 10 })
+    );
+    const rejected = evaluateMatch(
+      makePreference({ allowFixedOvertime: false }),
+      makeApplication({ fixedOvertimeType: 'included', fixedOvertimeHours: 10 })
+    );
+    expect(rejected.unmetMustHaves).toContain('みなし残業なしの希望に反する');
+    expect(rejected.score!).toBeLessThan(allowed.score!);
+  });
+
+  it('超過分の別途支給が必須なのに未確認だと未充足条件になる', () => {
+    const result = evaluateMatch(
+      makePreference({ requireOvertimePayBeyondFixed: true }),
+      makeApplication({
+        fixedOvertimeType: 'included',
+        fixedOvertimeHours: 10,
+        overtimePayBeyondFixed: false,
+      })
+    );
+    expect(result.unmetMustHaves).toContain(
+      'みなし残業の超過分が別途支給されるか未確認'
+    );
+  });
+
+  it('マスタ選択した福利厚生は絶対条件の判定にも使われる', () => {
+    const result = evaluateMatch(
+      makePreference({ mustHaveConditions: ['住宅手当'] }),
+      makeApplication({ benefitCodes: ['housing_allowance'], benefits: [] })
+    );
+    expect(result.unmetMustHaves).not.toContain('住宅手当');
   });
 });
