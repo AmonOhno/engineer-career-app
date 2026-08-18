@@ -1,0 +1,45 @@
+name: CI
+
+# CONTRIBUTING.md の「マージ前チェック」を機械的に担保する。
+# PR と main への push で typecheck / test / build を回す。
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同じ ref に新しい push が来たら古い実行は打ち切る。
+# 無料枠（private の場合 2,000 分/月）を二重実行で削らないための設定。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck / test / build
+    runs-on: ubuntu-latest
+    # 通常 2 分程度で終わる。ハングしたぶんだけ無料枠を食うので上限を切る
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Supabase の接続情報はビルド時に埋め込まれるが、未設定でもビルド自体は通る。
+      # ここでは「ビルドが壊れていないこと」だけを見る（実際の値の注入は deploy.yml）
+      - name: Build
+        run: npm run build

@@ -87,15 +87,34 @@ npm run build       # 型検査 + 本番ビルド
 npm run preview     # ビルド結果の確認
 ```
 
+この 3 つは PR と main への push で GitHub Actions（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）
+でも実行される。落ちている PR はマージしない。
+
+## デプロイ
+
+main にマージすると GitHub Actions がビルドし、**Cloudflare Pages** へ配信する
+（[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)）。
+ビルドは Actions 側で行い、成果物だけを Direct Upload するため Cloudflare 側のビルドは使わない。
+
+サーバーサイドの処理を持たない静的 SPA なので、**Cloudflare の無料プランの範囲で運用できる**。
+
+初回に必要な設定（Pages プロジェクト、API トークン、GitHub の Secrets / Variables、
+Supabase のリダイレクト URL）と無料枠の考え方は
+[docs/deployment.md](docs/deployment.md) にまとめてある。
+
 ## 構成
 
 ```
 .
 ├── CONTRIBUTING.md          # 開発規約（issue 駆動 → PR → マージ）
 ├── CLAUDE.md                # AI エージェント向けの前提と規約
-├── .github/                 # issue / PR テンプレート
+├── .github/
+│   ├── workflows/ci.yml     # typecheck / test / build
+│   ├── workflows/deploy.yml # Cloudflare Pages へのデプロイ
+│   └── ...                  # issue / PR テンプレート
 ├── index.html
 ├── vite.config.ts
+├── public/_redirects        # SPA 用のフォールバック（Cloudflare Pages）
 ├── src/
 │   ├── App.tsx              # タブ切り替え + 認証ゲート + 初回ロード
 │   ├── types/career.ts      # 型定義のみ
@@ -116,7 +135,9 @@ npm run preview     # ビルド結果の確認
 │   │   └── draftStore.ts    # 入力途中データの保持（タブ切り替え対策）
 │   └── components/          # 画面
 ├── supabase/migrations/     # career_* テーブル定義（RLS 込み）
-└── docs/specification.md    # 詳細仕様
+└── docs/
+    ├── specification.md     # 詳細仕様
+    └── deployment.md        # Cloudflare Pages へのデプロイ手順
 ```
 
 ## 設計上の約束
@@ -144,4 +165,5 @@ npm run preview     # ビルド結果の確認
 
 React 18 / TypeScript / Vite / Zustand / Supabase（PostgreSQL + Auth + RLS）/ Jest
 
-詳細な仕様は [docs/specification.md](docs/specification.md) を参照。
+詳細な仕様は [docs/specification.md](docs/specification.md)、
+デプロイ手順は [docs/deployment.md](docs/deployment.md) を参照。
