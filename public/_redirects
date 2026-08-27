@@ -1,0 +1,3 @@
+# SPA なので、どのパスへ直接アクセスされても index.html を返す。
+# Cloudflare Pages は静的ファイルを優先して探すため、実在するアセットには影響しない。
+/*    /index.html   200

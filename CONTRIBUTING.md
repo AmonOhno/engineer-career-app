@@ -80,7 +80,11 @@ npm test            # ドメインロジックの単体テスト
 npm run build       # 型検査 + 本番ビルド
 ```
 
-いずれかが落ちている PR はマージしない。
+いずれも PR を出した時点で GitHub Actions（`.github/workflows/ci.yml`）が自動で実行する。
+**いずれかが落ちている PR はマージしない。**
+
+main へマージされると `.github/workflows/deploy.yml` が Cloudflare Pages へ配信する。
+デプロイ周りの設定は [docs/deployment.md](docs/deployment.md) を参照。
 
 ## 6. 実装上の約束
 

@@ -51,3 +51,4 @@ npm run build       # 型検査 + 本番ビルド
 | `src/lib/documents/` | HTML 変換では入力を必ずエスケープする |
 | `src/lib/masters/` | 福利厚生・みなし残業のマスタ。コード一覧の正は `types/career.ts` の `BenefitCode` |
 | `src/lib/supabase.ts` | 接続情報を `console.log` に出さない（設定済みか否かのみ） |
+| `.github/workflows/` | CI は PR / main push、デプロイは main push のみ。`VITE_` の値はビルド時にバンドルへ埋め込まれる |
