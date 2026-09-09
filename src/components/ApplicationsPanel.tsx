@@ -22,6 +22,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Dialog,
   EmptyState,
   Field,
   ManYenInput,
@@ -91,30 +92,150 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
     'applications:editingId',
     () => null
   );
+  // ダイアログの開閉も下書きに保持する。タブを切り替えて戻っても状態が消えない。
+  const [dialogOpen, setDialogOpen] = useDraftState<boolean>(
+    'applications:dialogOpen',
+    () => false
+  );
 
   const update = <K extends keyof CareerApplication>(
     key: K,
     value: CareerApplication[K]
   ) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const reset = () => {
+  const closeDialog = () => {
     setForm(emptyApplication(userId));
     setEditingId(null);
+    setDialogOpen(false);
+  };
+
+  const openCreate = () => {
+    setForm(emptyApplication(userId));
+    setEditingId(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (application: CareerApplication) => {
+    setForm(application);
+    setEditingId(application.id);
+    setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!form.companyName.trim()) return;
     await saveApplication(form);
-    reset();
+    closeDialog();
   };
 
   return (
     <>
       <Card
-        title={editingId ? '応募先を編集' : '応募先を追加'}
+        title={`案件一覧（${applications.length} 件）`}
         description="求人票の提示レンジを入れると、希望条件とのマッチ度が出る。"
+        actions={<Button onClick={openCreate}>新規追加</Button>}
       >
-        <div className="grid">
+        {applications.length === 0 && (
+          <EmptyState message="まだ応募先が登録されていない。" />
+        )}
+        {applications.map((application) => {
+          const match = evaluateMatch(preference, application);
+          return (
+            <div key={application.id} className="record">
+              <div className="record__head">
+                <div>
+                  <strong>
+                    <span className="badge badge--status">
+                      {APPLICATION_STATUS_LABEL[application.status]}
+                    </span>
+                    {application.companyName}
+                  </strong>
+                  <span className="record__meta">
+                    {application.jobTitle}
+                    {application.incomeRangeMax != null &&
+                      ` ／ 提示 ${formatManYen(application.incomeRangeMin)} 〜 ${formatManYen(
+                        application.incomeRangeMax
+                      )}`}
+                    {application.offeredIncome != null &&
+                      ` ／ オファー ${formatManYen(application.offeredIncome)}`}
+                  </span>
+                </div>
+                <div className="table__actions">
+                  <Button variant="ghost" onClick={() => openEdit(application)}>
+                    編集
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => deleteApplication(application.id)}
+                  >
+                    削除
+                  </Button>
+                </div>
+              </div>
+
+              {match.score != null && (
+                <div className="match">
+                  <div className="match__head">
+                    <span>希望条件とのマッチ度</span>
+                    <strong>{match.score}%</strong>
+                  </div>
+                  <ScoreBar score={match.score} />
+                  <div className="match__factors">
+                    {match.factors
+                      .filter((factor) => factor.score != null)
+                      .map((factor) => (
+                        <span key={factor.label} className="match__factor">
+                          {factor.label}: {factor.score}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {match.unmetMustHaves.length > 0 && (
+                <p className="record__body record__body--warn">
+                  未充足の条件: {match.unmetMustHaves.join(' / ')}
+                </p>
+              )}
+
+              {application.fixedOvertimeType !== 'unknown' && (
+                <p className="record__body">
+                  {describeFixedOvertime(
+                    application.fixedOvertimeType,
+                    application.fixedOvertimeHours,
+                    application.fixedOvertimeAllowance,
+                    application.overtimePayBeyondFixed
+                  )}
+                </p>
+              )}
+
+              {application.nextAction && (
+                <p className="record__body">
+                  次アクション: {application.nextAction}
+                  {application.nextActionOn && `（${application.nextActionOn}）`}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </Card>
+
+      {dialogOpen && (
+        <Dialog
+          title={editingId ? '応募先を編集' : '応募先を追加'}
+          description="求人票の提示レンジを入れると、希望条件とのマッチ度が出る。"
+          onClose={closeDialog}
+          footer={
+            <>
+              <Button variant="ghost" onClick={closeDialog}>
+                キャンセル
+              </Button>
+              <Button onClick={handleSubmit} disabled={!form.companyName.trim()}>
+                {editingId ? '更新する' : '追加する'}
+              </Button>
+            </>
+          }
+        >
+          <div className="grid">
           <Field label="企業名">
             <TextInput
               value={form.companyName}
@@ -251,124 +372,21 @@ export const ApplicationsPanel = ({ userId }: { userId: string }) => {
             />
           </Field>
         </div>
-        <Field label="福利厚生（求人票に記載されているもの）" wide>
-          <BenefitSelector
-            value={form.benefitCodes}
-            onChange={(v) => update('benefitCodes', v as BenefitCode[])}
-          />
-        </Field>
-        <div className="inline-checks">
-          <Checkbox
-            label="みなし残業の超過分は別途支給される"
-            checked={form.overtimePayBeyondFixed}
-            onChange={(v) => update('overtimePayBeyondFixed', v)}
-          />
-        </div>
-        <div className="form-footer">
-          <div className="form-footer__buttons">
-            {editingId && (
-              <Button variant="ghost" onClick={reset}>
-                キャンセル
-              </Button>
-            )}
-            <Button onClick={handleSubmit} disabled={!form.companyName.trim()}>
-              {editingId ? '更新する' : '追加する'}
-            </Button>
+          <Field label="福利厚生（求人票に記載されているもの）" wide>
+            <BenefitSelector
+              value={form.benefitCodes}
+              onChange={(v) => update('benefitCodes', v as BenefitCode[])}
+            />
+          </Field>
+          <div className="inline-checks">
+            <Checkbox
+              label="みなし残業の超過分は別途支給される"
+              checked={form.overtimePayBeyondFixed}
+              onChange={(v) => update('overtimePayBeyondFixed', v)}
+            />
           </div>
-        </div>
-      </Card>
-
-      <Card title={`応募一覧（${applications.length} 件）`}>
-        {applications.length === 0 && (
-          <EmptyState message="まだ応募先が登録されていない。" />
-        )}
-        {applications.map((application) => {
-          const match = evaluateMatch(preference, application);
-          return (
-            <div key={application.id} className="record">
-              <div className="record__head">
-                <div>
-                  <strong>
-                    <span className="badge badge--status">
-                      {APPLICATION_STATUS_LABEL[application.status]}
-                    </span>
-                    {application.companyName}
-                  </strong>
-                  <span className="record__meta">
-                    {application.jobTitle}
-                    {application.incomeRangeMax != null &&
-                      ` ／ 提示 ${formatManYen(application.incomeRangeMin)} 〜 ${formatManYen(
-                        application.incomeRangeMax
-                      )}`}
-                    {application.offeredIncome != null &&
-                      ` ／ オファー ${formatManYen(application.offeredIncome)}`}
-                  </span>
-                </div>
-                <div className="table__actions">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setForm(application);
-                      setEditingId(application.id);
-                    }}
-                  >
-                    編集
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => deleteApplication(application.id)}
-                  >
-                    削除
-                  </Button>
-                </div>
-              </div>
-
-              {match.score != null && (
-                <div className="match">
-                  <div className="match__head">
-                    <span>希望条件とのマッチ度</span>
-                    <strong>{match.score}%</strong>
-                  </div>
-                  <ScoreBar score={match.score} />
-                  <div className="match__factors">
-                    {match.factors
-                      .filter((factor) => factor.score != null)
-                      .map((factor) => (
-                        <span key={factor.label} className="match__factor">
-                          {factor.label}: {factor.score}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {match.unmetMustHaves.length > 0 && (
-                <p className="record__body record__body--warn">
-                  未充足の条件: {match.unmetMustHaves.join(' / ')}
-                </p>
-              )}
-
-              {application.fixedOvertimeType !== 'unknown' && (
-                <p className="record__body">
-                  {describeFixedOvertime(
-                    application.fixedOvertimeType,
-                    application.fixedOvertimeHours,
-                    application.fixedOvertimeAllowance,
-                    application.overtimePayBeyondFixed
-                  )}
-                </p>
-              )}
-
-              {application.nextAction && (
-                <p className="record__body">
-                  次アクション: {application.nextAction}
-                  {application.nextActionOn && `（${application.nextActionOn}）`}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </Card>
+        </Dialog>
+      )}
     </>
   );
 };
