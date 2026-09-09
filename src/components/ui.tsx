@@ -1,5 +1,6 @@
 /** 画面共通の小さな UI 部品。ドメインロジックは持たない。 */
 
+import { useEffect } from 'react';
 import type { ChangeEvent, ReactNode } from 'react';
 
 export const Card = ({
@@ -26,6 +27,58 @@ export const Card = ({
     {children}
   </section>
 );
+
+/** モーダルダイアログ。オーバーレイのクリックと Esc キーで閉じる。 */
+export const Dialog = ({
+  title,
+  description,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  description?: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) => {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="dialog-overlay" onClick={onClose}>
+      <div
+        className="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="dialog__header">
+          <div>
+            <h2 className="dialog__title">{title}</h2>
+            {description && <p className="dialog__description">{description}</p>}
+          </div>
+          <button
+            type="button"
+            className="dialog__close"
+            onClick={onClose}
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+        </header>
+        <div className="dialog__body">{children}</div>
+        {footer && <div className="dialog__footer">{footer}</div>}
+      </div>
+    </div>
+  );
+};
 
 export const Field = ({
   label,
