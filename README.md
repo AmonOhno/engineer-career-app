@@ -1,5 +1,44 @@
 # Career Compass
 
+## アーキテクチャ概要
+
+ブラウザで動く静的 SPA（React / TypeScript）が Supabase（Auth + PostgREST + PostgreSQL / RLS）を直接呼ぶ構成。独自の API サーバーは持たず、配信は GitHub Actions から Cloudflare Pages へ行う。
+
+```mermaid
+C4Container
+  title Container — Career Compass
+
+  Person(user, "転職を検討するエンジニア")
+
+  System_Boundary(cc, "Career Compass") {
+    Container(spa, "Web SPA", "React 18 / TypeScript / Zustand / Vite", "画面・ドメイン計算・書類生成をすべてブラウザ内で実行")
+    ContainerDb(session, "下書きストレージ", "ブラウザ sessionStorage", "入力途中のフォーム内容（career-compass:drafts）")
+    Container(static, "静的アセット", "Cloudflare Pages", "index.html と JS/CSS バンドル、_redirects")
+  }
+
+  System_Boundary(sb, "Supabase") {
+    Container(auth, "Supabase Auth", "GoTrue", "メール / Google / GitHub ログイン、JWT 発行")
+    Container(rest, "PostgREST API", "Supabase REST", "テーブルへの CRUD を HTTP で公開")
+    ContainerDb(db, "PostgreSQL", "Supabase Postgres", "career_* 10 テーブル。全テーブル RLS 有効")
+  }
+
+  System_Ext(oauth, "Google / GitHub", "OAuth プロバイダ")
+  System_Ext(ci, "GitHub Actions", "ci.yml / deploy.yml")
+
+  Rel(user, spa, "操作", "HTTPS")
+  Rel(static, spa, "配信")
+  Rel(spa, session, "下書きを読み書き")
+  Rel(spa, auth, "サインイン / セッション取得", "HTTPS")
+  Rel(spa, rest, "select / upsert / delete", "HTTPS + JWT")
+  Rel(rest, db, "SQL（RLS 適用）")
+  Rel(auth, oauth, "OAuth 認可")
+  Rel(ci, static, "build → wrangler pages deploy dist")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
+```
+
+System Context / Container / Component の各図、主要なデータフロー、ディレクトリの役割は [docs/architecture.md](docs/architecture.md) を参照。
+
 エンジニア転職で **年収 1000 万円** に到達するための、現在地・希望条件・応募状況の管理と
 応募書類の自動生成を行う Web アプリ。
 
